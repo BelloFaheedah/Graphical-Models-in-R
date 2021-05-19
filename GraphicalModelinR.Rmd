@@ -1,0 +1,74 @@
+---
+title: "Analyzing Big Data using Graphical Models in R"
+output: html_notebook
+---
+
+#Background
+The medical superintendent of a hospital has a dataset containing the personal and health-related informationof patients visiting the hospital. He wants to find out the dependencies between the health and social characteristics or activities of these individuals i.e. he wants to know whether any of the characteristics (or activities) may have an impact on hypertension. 
+
+
+#Description of the dataset
+The dataset contains 9 variables and a total of 1083 records. These variables are:-
+FEV:- Forced ejection volume
+Kol:- Cholesterol in the human body
+Hyp:- hypertension
+logBMI:- Body Mass Index (logarithmic form)
+Smok:- Smoking habit
+Alc:- Alcohol consumption
+Work:- Employment status of the individual
+Sex:- Gender of the individual
+Year:- Year of data collection (1967-1984)
+```{r}
+library("deal")
+data(ksl)
+head(ksl)
+```
+
+Creating an empty DAG (Directed Acrylic Graph)
+```{r}
+ksl.nw<-network(ksl)
+ksl.nw
+```
+Having got the above output, let us join the distribution of discrete variables by using the following command:
+```{r}
+ksl.prior<- jointprior(ksl.nw)
+ksl.prior
+```
+The variables SEX and YEAR remain unaffected by other variables; therefore, a ban list is created to remove these 2 variables.
+```{r}
+ban_list<-matrix(c(5,5,6,6,7,7,9,8,9,8,9,8,9,8), ncol = 2)
+ban_list
+```
+
+```{r}
+ksl.nw$ban_list<-ban_list
+```
+
+Assigning the rest of the variables as parameters to a tree
+```{r}
+ksl.nw<-learn(ksl.nw, ksl, ksl.prior)$nw
+ksl.nw
+```
+Evaluating the dependencies
+```{r}
+result<-heuristic(ksl.nw, ksl, ksl.prior, restart = 2, degree=10, trace = TRUE)
+result
+```
+
+Finding the best fit graph
+```{r}
+bestfit<-result$nw[[1]]
+bestfit
+```
+#Conclusion
+The results obtained from the analysis and the graph above:
+1. Alc, Smok and Work variables depend on the Sex and Year variables directly
+2. Smok and Work also depend on Alc variable
+3. FEV depends directly on variables Year and Sex, and given these variables and independent of the other variables
+4. Kol variable depends directly on Year and Sex variables
+5. logBMI variable depends on Sex variable
+6. Hyp variable depends on logBMI variable
+
+Therefore from tha above analysis, it can be concluded that hypertension depends on BMI, which in turn depends on Sex
+
+Thus, it is seen that creating DAGs and their corresponding probabilities helps predict the effect of the variables on each other. Variables that affect other variables directly or conditionally are also observed.
